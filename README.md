@@ -1,5 +1,8 @@
 # Erdős Problem #1052 代码证明
-
+小红书
+https://www.xiaohongshu.com/user/profile/60173c37000000000100b702
+x
+https://x.com/zokoko66
 ## 验证架构
 
 ```
