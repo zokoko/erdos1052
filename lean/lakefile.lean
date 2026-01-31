@@ -4,7 +4,7 @@ open Lake DSL
 package erdos1052
 
 require mathlib from git
-  "https://github.com/leanprover-community/mathlib4" @ "v4.3.0"
+  "https://github.com/leanprover-community/mathlib4" @ "v4.27.0"
 
 @[default_target]
 lean_lib Erdos1052

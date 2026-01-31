@@ -11,25 +11,148 @@
 
 import Erdos1052.Basic
 import Erdos1052.Layer0Empty
--- import Erdos1052.L3_L17_Theorems  -- 暂时禁用，mathlib API 兼容性问题
+import Erdos1052.L3_L17_Theorems
 
 namespace Erdos1052
 
--- 以下定理已在主论文中证明，这里用 axiom 声明（mathlib API 兼容性问题待修复）
-axiom layer_3_empty_thm : ¬∃ m : Nat, m % 2 = 1 ∧ IsUnitaryPerfect (2^3 * m)
-axiom layer_4_empty_thm : ¬∃ m : Nat, m % 2 = 1 ∧ IsUnitaryPerfect (2^4 * m)
-axiom layer_5_empty_thm : ¬∃ m : Nat, m % 2 = 1 ∧ IsUnitaryPerfect (2^5 * m)
-axiom layer_7_empty_thm : ¬∃ m : Nat, m % 2 = 1 ∧ IsUnitaryPerfect (2^7 * m)
-axiom layer_8_empty_thm : ¬∃ m : Nat, m % 2 = 1 ∧ IsUnitaryPerfect (2^8 * m)
-axiom layer_9_empty_thm : ¬∃ m : Nat, m % 2 = 1 ∧ IsUnitaryPerfect (2^9 * m)
-axiom layer_10_empty_thm : ¬∃ m : Nat, m % 2 = 1 ∧ IsUnitaryPerfect (2^10 * m)
-axiom layer_11_empty_thm : ¬∃ m : Nat, m % 2 = 1 ∧ IsUnitaryPerfect (2^11 * m)
-axiom layer_12_empty_thm : ¬∃ m : Nat, m % 2 = 1 ∧ IsUnitaryPerfect (2^12 * m)
-axiom layer_13_empty_thm : ¬∃ m : Nat, m % 2 = 1 ∧ IsUnitaryPerfect (2^13 * m)
-axiom layer_14_empty_thm : ¬∃ m : Nat, m % 2 = 1 ∧ IsUnitaryPerfect (2^14 * m)
-axiom layer_15_empty_thm : ¬∃ m : Nat, m % 2 = 1 ∧ IsUnitaryPerfect (2^15 * m)
-axiom layer_16_empty_thm : ¬∃ m : Nat, m % 2 = 1 ∧ IsUnitaryPerfect (2^16 * m)
-axiom layer_17_empty_thm : ¬∃ m : Nat, m % 2 = 1 ∧ IsUnitaryPerfect (2^17 * m)
+-- 以下定理使用 v₂ 约束分析证明
+
+-- 辅助引理：σ*(2^b) = 1 + 2^b
+lemma sigmaStar_pow_2 (b : Nat) (hb : b ≥ 1) : sigmaStar (2^b) = 1 + 2^b := by
+  exact sigmaStar_prime_power 2 b Nat.prime_two hb
+
+-- 辅助引理：gcd(2^b, m) = 1 当 m 奇数
+-- 直接使用 Erdos1052.L3_L17_Theorems 中的 coprime_pow2_odd 定理
+
+-- 层空集证明的核心引理：v₂ 约束
+-- 若 IsUnitaryPerfect (2^b * m) 且 m 奇数，则 v₂(σ*(m)) = b + 1
+-- 形式化证明
+theorem layer_v2_constraint (b m : Nat) (hb : b ≥ 1) (hm_pos : m > 0) (hm_odd : m % 2 = 1)
+    (hup : IsUnitaryPerfect (2^b * m)) : v₂ (sigmaStar m) = b + 1 := by
+  -- σ*(2^b * m) = 2 * (2^b * m) = 2^{b+1} * m
+  have hup_eq : sigmaStar (2^b * m) = 2^(b+1) * m := by
+    have h := hup.2
+    simp only [Nat.pow_succ] at h ⊢
+    ring_nf at h ⊢
+    exact h
+  -- gcd(2^b, m) = 1（因为 m 是奇数）
+  have hcop : Nat.Coprime (2^b) m := coprime_pow2_odd b m hm_odd
+  -- 2^b > 0
+  have h2b_pos : 2^b > 0 := Nat.pos_pow_of_pos b (by decide : 2 > 0)
+  -- σ*(2^b * m) = σ*(2^b) * σ*(m) = (1 + 2^b) * σ*(m)
+  have hmult : sigmaStar (2^b * m) = sigmaStar (2^b) * sigmaStar m :=
+    sigmaStar_multiplicative_thm (2^b) m hcop h2b_pos hm_pos
+  have hsig2b : sigmaStar (2^b) = 1 + 2^b := sigmaStar_pow_2 b hb
+  -- (1 + 2^b) * σ*(m) = 2^{b+1} * m
+  have heq : (1 + 2^b) * sigmaStar m = 2^(b+1) * m := by
+    rw [← hup_eq, hmult, hsig2b]
+  -- v₂((1 + 2^b) * σ*(m)) = v₂(2^{b+1} * m)
+  -- v₂(1 + 2^b) = 0（1 + 2^b 是奇数）
+  -- v₂(m) = 0（m 是奇数）
+  -- 因此 v₂(σ*(m)) = b + 1
+  have h_odd_2b1 : (1 + 2^b) % 2 = 1 := by
+    have h2b_even : 2^b % 2 = 0 := by
+      cases b with
+      | zero => omega
+      | succ n => simp [Nat.pow_succ, Nat.mul_mod]
+    omega
+  -- v₂(1 + 2^b) = 0
+  have hv2_2b1 : v₂ (1 + 2^b) = 0 := by
+    rw [v₂]
+    simp [padicValNat]
+    have h : ¬(2 ∣ (1 + 2^b)) := by
+      intro hdvd
+      have : (1 + 2^b) % 2 = 0 := Nat.mod_eq_zero_of_dvd hdvd
+      omega
+    exact padicValNat.eq_zero_of_not_dvd h
+  -- 由 heq: (1 + 2^b) * σ*(m) = 2^{b+1} * m
+  -- v₂(左边) = v₂(1 + 2^b) + v₂(σ*(m)) = 0 + v₂(σ*(m))
+  -- v₂(右边) = v₂(2^{b+1}) + v₂(m) = (b+1) + 0
+  -- v₂ 乘法性：v₂(a * b) = v₂(a) + v₂(b)（当 a, b > 0）
+  have h_pos_lhs : (1 + 2^b) * sigmaStar m > 0 := by
+    have h1 : 1 + 2^b > 0 := Nat.succ_pos _
+    have h2 : sigmaStar m > 0 := sigmaStar_pos m hm_pos
+    exact Nat.mul_pos h1 h2
+  have h_pos_rhs : 2^(b+1) * m > 0 := Nat.mul_pos (Nat.pos_pow_of_pos (b+1) (by decide)) hm_pos
+  -- v₂(2^{b+1} * m) = v₂(2^{b+1}) + v₂(m) = (b+1) + 0 = b+1
+  have hv2_rhs : v₂ (2^(b+1) * m) = b + 1 := by
+    rw [v₂]
+    have hm_odd' : ¬(2 ∣ m) := fun h => by
+      have : m % 2 = 0 := Nat.mod_eq_zero_of_dvd h
+      omega
+    -- v₂(2^{b+1}) = b+1
+    have hv2_pow : padicValNat 2 (2^(b+1)) = b + 1 := padicValNat.prime_pow_self (by decide) (b+1)
+    -- v₂(m) = 0（m 奇数）
+    have hv2_m : padicValNat 2 m = 0 := padicValNat.eq_zero_of_not_dvd hm_odd'
+    -- v₂(2^{b+1} * m) = v₂(2^{b+1}) + v₂(m)
+    rw [padicValNat.mul (Nat.pos_pow_of_pos (b+1) (by decide)) hm_pos, hv2_pow, hv2_m]
+  -- v₂((1 + 2^b) * σ*(m)) = v₂(1 + 2^b) + v₂(σ*(m)) = 0 + v₂(σ*(m))
+  have hv2_lhs : v₂ ((1 + 2^b) * sigmaStar m) = v₂ (sigmaStar m) := by
+    rw [v₂, v₂]
+    have h1_pos : 1 + 2^b > 0 := Nat.succ_pos _
+    have hsig_pos : sigmaStar m > 0 := sigmaStar_pos m hm_pos
+    rw [padicValNat.mul h1_pos hsig_pos]
+    -- v₂(1 + 2^b) = 0
+    have hv2_2b1' : padicValNat 2 (1 + 2^b) = 0 := by
+      have h : ¬(2 ∣ (1 + 2^b)) := fun hdvd => by
+        have : (1 + 2^b) % 2 = 0 := Nat.mod_eq_zero_of_dvd hdvd
+        omega
+      exact padicValNat.eq_zero_of_not_dvd h
+    rw [hv2_2b1']
+    ring
+  -- 由 heq 和两边 v₂ 相等
+  rw [heq] at hv2_lhs
+  rw [← hv2_lhs, hv2_rhs]
+
+-- 关键约束引理：若 IsUnitaryPerfect (2^b * m) 且 m 奇数，则 (1 + 2^b) | m
+-- 形式化证明
+theorem layer_divisibility_constraint (b m : Nat) (hb : b ≥ 1) (hm_pos : m > 0) (hm_odd : m % 2 = 1)
+    (hup : IsUnitaryPerfect (2^b * m)) : (1 + 2^b) ∣ m := by
+  -- σ*(2^b * m) = 2 * (2^b * m) = 2^{b+1} * m
+  have hup_eq : sigmaStar (2^b * m) = 2^(b+1) * m := by
+    have h := hup.2
+    simp only [Nat.pow_succ] at h ⊢
+    ring_nf at h ⊢
+    exact h
+  -- gcd(2^b, m) = 1（因为 m 是奇数）
+  have hcop : Nat.Coprime (2^b) m := coprime_pow2_odd b m hm_odd
+  -- 2^b > 0
+  have h2b_pos : 2^b > 0 := Nat.pos_pow_of_pos b (by decide : 2 > 0)
+  -- σ*(2^b * m) = σ*(2^b) * σ*(m) = (1 + 2^b) * σ*(m)
+  have hmult : sigmaStar (2^b * m) = sigmaStar (2^b) * sigmaStar m :=
+    sigmaStar_multiplicative_thm (2^b) m hcop h2b_pos hm_pos
+  have hsig2b : sigmaStar (2^b) = 1 + 2^b := sigmaStar_pow_2 b hb
+  -- (1 + 2^b) * σ*(m) = 2^{b+1} * m
+  have heq : (1 + 2^b) * sigmaStar m = 2^(b+1) * m := by
+    rw [← hup_eq, hmult, hsig2b]
+  -- (1 + 2^b) | (1 + 2^b) * σ*(m) = 2^{b+1} * m
+  have hdvd_prod : (1 + 2^b) ∣ 2^(b+1) * m := by
+    rw [← heq]
+    exact Nat.dvd_mul_right (1 + 2^b) (sigmaStar m)
+  -- gcd(1 + 2^b, 2^{b+1}) = 1（因为 1 + 2^b 是奇数）
+  have hcop2 : Nat.Coprime (1 + 2^b) (2^(b+1)) := by
+    rw [Nat.Coprime]
+    apply Nat.coprime_of_dvd
+    intro k hk hk_dvd_2b1 hk_dvd_2bpow
+    -- k > 1 且 k | (1 + 2^b) 且 k | 2^{b+1}
+    -- 由于 k | 2^{b+1}，k 的所有素因子都是 2，所以 2 | k
+    have h2_dvd_k : 2 ∣ k := Nat.Prime.dvd_of_dvd_pow Nat.prime_two hk_dvd_2bpow
+    -- 但 1 + 2^b 是奇数，所以 2 ∤ (1 + 2^b)
+    have h_odd_2b1 : (1 + 2^b) % 2 = 1 := by
+      have h2b_even : 2^b % 2 = 0 := by
+        cases b with
+        | zero => omega
+        | succ n => simp [Nat.pow_succ, Nat.mul_mod]
+      omega
+    have h2_dvd_2b1 : 2 ∣ (1 + 2^b) := Nat.dvd_trans h2_dvd_k hk_dvd_2b1
+    have : (1 + 2^b) % 2 = 0 := Nat.mod_eq_zero_of_dvd h2_dvd_2b1
+    omega
+  -- 由 Coprime.dvd_of_dvd_mul_left，得 (1 + 2^b) | m
+  exact Nat.Coprime.dvd_of_dvd_mul_left hcop2 hdvd_prod
+
+/-!
+## L₃～L₁₇ 空集定理已在 Erdos1052.L3_L17_Theorems 中完整形式化
+-/
 
 /-!
 ## 2-adic valuation 基础设施

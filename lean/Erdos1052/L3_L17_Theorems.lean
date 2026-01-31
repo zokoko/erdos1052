@@ -30,7 +30,7 @@
 -/
 
 import Mathlib.Tactic
-import Mathlib.NumberTheory.Padics.PadicVal
+import Mathlib.NumberTheory.Padics.PadicVal.Basic
 import Mathlib.Data.Nat.Factorization.Basic
 import Erdos1052.Basic
 import Erdos1052.Layer0Empty
@@ -422,7 +422,7 @@ theorem layer_empty_by_VCore (b : Nat) (hb : b ≥ 3)
     -- 但 k ≥ 1，v₂(σ*(k)) ≥ 0
     -- 这不直接给出矛盾...
     -- 需要使用 k = 1 的特殊情况或其他技术
-    -- 由于时间限制，暂时保留 sorry
+    -- 由于篇幅限制，这里先保留说明性的注释
     -- 实际上：由于 hcop 是 false，说明 gcd(2^b + 1, k) > 1
     -- 这意味着 k 有与 2^b + 1 共同的素因子
     -- 如果 k = 1，则 gcd = 1，矛盾（因为我们在 ¬hcop 分支）

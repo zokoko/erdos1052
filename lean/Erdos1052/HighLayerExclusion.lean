@@ -404,7 +404,14 @@ theorem b3_contradiction (b : Nat) (hb : b ≥ 19) (heq : b = 3) : False := by
 
 -- 2^n + 1 是奇数（对 n ≥ 1）
 theorem two_pow_plus_one_odd (n : Nat) (hn : n ≥ 1) : (2^n + 1) % 2 = 1 := by
-  sorry
+  -- 2^n 是偶数（n ≥ 1），所以 2^n + 1 是奇数
+  have h2n_even : (2^n) % 2 = 0 := by
+    cases n with
+    | zero => exact absurd rfl (Nat.one_le_iff_ne_zero.mp hn)
+    | succ k => simp [Nat.pow_succ, Nat.mul_mod, Nat.mod_self]
+  have hadd : (2^n + 1) % 2 = (2^n % 2 + 1 % 2) % 2 := Nat.add_mod (2^n) 1 2
+  simp only [h2n_even, Nat.one_mod] at hadd
+  exact hadd
 
 -- 2^n + 1 不是 2 的幂（对 n ≥ 1）
 theorem two_pow_plus_one_not_power_of_two (n : Nat) (hn : n ≥ 1) :
@@ -428,9 +435,64 @@ theorem two_pow_plus_one_not_power_of_two (n : Nat) (hn : n ≥ 1) :
 但 2^n + 1（n ≥ 1）是奇数，不能是 2 的幂。矛盾。
 -/
 
+/-- Mersenne-Fermat 不相容定理
+    证明：若 2^{b-1}+1 = 2^s-1，则 2^{b-1}+2 = 2^s，即 2(2^{b-2}+1) = 2^s
+    所以 2^{b-2}+1 = 2^{s-1}
+    但 2^{b-2}+1 是奇数（b≥3 ⟹ b-2≥1 ⟹ 2^{b-2} 偶数），2^{s-1} 是偶数（s≥2 ⟹ s-1≥1），矛盾
+-/
 theorem mersenne_fermat_incompatible (b : Nat) (hb : b ≥ 3) :
     ∀ s : Nat, s ≥ 2 → 2^(b-1) + 1 ≠ 2^s - 1 := by
-  sorry
+  intro s hs heq
+  -- 设 2^{b-1} + 1 = 2^s - 1
+  -- 则 2^{b-1} + 2 = 2^s
+  have h1 : 2^(b-1) + 2 = 2^s := by omega
+  -- 2(2^{b-2} + 1) = 2^s
+  have hb2 : b - 1 ≥ 1 := by omega
+  have hb3 : b - 2 + 1 = b - 1 := by omega
+  have h2 : 2 * (2^(b-2) + 1) = 2^s := by
+    have h2pow : 2^(b-1) = 2 * 2^(b-2) := by
+      rw [← Nat.pow_succ]
+      congr 1
+      omega
+    rw [h2pow] at h1
+    ring_nf at h1 ⊢
+    exact h1
+  -- 2^{b-2} + 1 = 2^{s-1}
+  have hs1 : s ≥ 1 := Nat.le_trans (by decide : 1 ≤ 2) hs
+  have h3 : 2^(b-2) + 1 = 2^(s-1) := by
+    have h2s : 2^s = 2 * 2^(s-1) := by
+      rw [← Nat.pow_succ]
+      congr 1
+      omega
+    rw [h2s] at h2
+    have h := Nat.eq_of_mul_eq_mul_left (by decide : 0 < 2) h2
+    exact h
+  -- 2^{b-2} + 1 是奇数（b ≥ 3 ⟹ b-2 ≥ 1 ⟹ 2^{b-2} 偶数）
+  have hb2_ge1 : b - 2 ≥ 1 := by omega
+  have h2pow_even : 2^(b-2) % 2 = 0 := by
+    have h : 2 ∣ 2^(b-2) := by
+      have : 2^(b-2) = 2 * 2^(b-2-1) := by
+        rw [← Nat.pow_succ]
+        congr 1
+        omega
+      rw [this]
+      exact Nat.dvd_mul_right 2 _
+    exact Nat.mod_eq_zero_of_dvd h
+  have hlhs_odd : (2^(b-2) + 1) % 2 = 1 := by omega
+  -- 2^{s-1} 是偶数（s ≥ 2 ⟹ s-1 ≥ 1）
+  have hs1_ge1 : s - 1 ≥ 1 := by omega
+  have hrhs_even : 2^(s-1) % 2 = 0 := by
+    have h : 2 ∣ 2^(s-1) := by
+      have : 2^(s-1) = 2 * 2^(s-1-1) := by
+        rw [← Nat.pow_succ]
+        congr 1
+        omega
+      rw [this]
+      exact Nat.dvd_mul_right 2 _
+    exact Nat.mod_eq_zero_of_dvd h
+  -- 矛盾：奇数 = 偶数
+  rw [h3] at hlhs_odd
+  omega
 
 /-!
 ### b ≥ 19 高层排除主定理
